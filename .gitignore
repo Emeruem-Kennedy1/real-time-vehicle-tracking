@@ -1,0 +1,6 @@
+venv\
+setup.cfg
+__pycache__/
+
+# ignore .db files
+*.db
