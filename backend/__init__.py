@@ -23,19 +23,19 @@ def create_app():
         # Import and register Blueprints
         from .vehicle.routes import vehicle_bp
 
-        app.register_blueprint(vehicle_bp, url_prefix="/user")
+        app.register_blueprint(vehicle_bp, url_prefix="/api/vehicle")
 
         from .station.routes import station_bp
 
-        app.register_blueprint(station_bp, url_prefix="/station")
+        app.register_blueprint(station_bp, url_prefix="/api/station")
 
         from .user.routes import user_bp
 
-        app.register_blueprint(user_bp, url_prefix="/user")
+        app.register_blueprint(user_bp, url_prefix="/api/user")
 
         from .auth.routes import auth_bp
 
-        app.register_blueprint(auth_bp, url_prefix="/auth")
+        app.register_blueprint(auth_bp, url_prefix="/api/auth")
 
         db.create_all()  # Create sql tables for our data models
 
