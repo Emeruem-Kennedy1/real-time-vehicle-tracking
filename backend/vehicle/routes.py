@@ -1,9 +1,10 @@
 from flask import Blueprint, request, jsonify
 from backend import db
-from backend.models import Vehicle
+from backend.models import Vehicle, Location
 from datetime import datetime
 from functools import wraps
-from backend.models import User
+from backend.models import User, Station
+from sqlalchemy.exc import SQLAlchemyError
 
 vehicle_bp = Blueprint("vehicle_bp", __name__)
 
@@ -11,20 +12,42 @@ vehicle_bp = Blueprint("vehicle_bp", __name__)
 def require_api_key(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        api_key = request.headers.get('x-api-key')
+        api_key = request.headers.get("x-api-key")
         user = User.query.filter_by(api_key=api_key).first()
         if user:
             return f(*args, **kwargs)
         else:
             return jsonify({"message": "Invalid or missing API Key."}), 401
+
     return decorated_function
 
 
-@vehicle_bp.route("/update_location", methods=["POST"])
+def add_location_for_vehicle(vehicle_id, latitude, longitude):
+    vehicle = Vehicle.query.get(vehicle_id)
+    if vehicle:
+        # Create a new location
+        new_location = Location(
+            latitude=latitude, longitude=longitude, vehicle_id=vehicle_id
+        )
+        db.session.add(new_location)
+
+        # Ensure only the last 10 locations are kept
+        locations_to_keep = (
+            vehicle.locations.order_by(Location.timestamp.desc()).limit(10).all()
+        )
+        locations_to_delete = vehicle.locations.filter(
+            ~Location.id.in_([loc.id for loc in locations_to_keep])
+        )
+        for loc in locations_to_delete:
+            db.session.delete(loc)
+
+        db.session.commit()
+
+
+@vehicle_bp.route("/<int:vehicle_id>/update_location", methods=["POST"])
 @require_api_key
-def update_location():
+def update_location(vehicle_id):
     data = request.get_json()
-    vehicle_id = data.get("vehicle_id")
     latitude = data.get("latitude")
     longitude = data.get("longitude")
 
@@ -32,8 +55,7 @@ def update_location():
     if not vehicle:
         return jsonify({"message": "vehicle not found."}), 404
 
-    vehicle.latitude = latitude
-    vehicle.longitude = longitude
+    add_location_for_vehicle(vehicle_id, latitude, longitude)
     vehicle.last_update = datetime.utcnow()
     db.session.commit()
 
@@ -55,7 +77,12 @@ def register_vehicle():
     db.session.commit()
 
     return (
-        jsonify({"message": "vehicle registered successfully.", "vehicle_id": new_vehicle.id}),
+        jsonify(
+            {
+                "message": "vehicle registered successfully.",
+                "vehicle_id": new_vehicle.id,
+            }
+        ),
         201,
     )
 
@@ -67,12 +94,22 @@ def get_vehicle(vehicle_id):
     if not vehicle:
         return jsonify({"message": "vehicle not found."}), 404
 
+    # get the last 10 locations
+    locations = vehicle.locations.order_by(Location.timestamp.desc()).limit(10).all()
+
     vehicle_data = {
-        "vehiclename": vehicle.vehiclename,
-        "email": vehicle.email,
-        "latitude": vehicle.latitude,
-        "longitude": vehicle.longitude,
+        "vehiclename": vehicle.vehicle_name,
+        "locations": [
+            {
+                "latitude": loc.latitude,
+                "longitude": loc.longitude,
+                "timestamp": loc.timestamp,
+            }
+            for loc in locations
+        ],
         "last_update": vehicle.last_update,
+        "is_active": vehicle.is_active,
+        "vehicle_type": vehicle.vehicle_type,
     }
     return jsonify(vehicle_data), 200
 
@@ -93,13 +130,52 @@ def deactivate_vehicle(vehicle_id):
 @vehicle_bp.route("/last_location/<int:vehicle_id>", methods=["GET"])
 @require_api_key
 def last_location(vehicle_id):
-    vehicle = Vehicle.query.get(vehicle_id)
-    if not vehicle:
-        return jsonify({"message": "vehicle not found."}), 404
+    if vehicle_id <= 0:
+        return jsonify({"message": "Invalid vehicle ID."}), 400
 
-    location_data = {
-        "latitude": vehicle.latitude,
-        "longitude": vehicle.longitude,
-        "last_update": vehicle.last_update,
-    }
-    return jsonify(location_data), 200
+    try:
+        vehicle = Vehicle.query.get(vehicle_id)
+        if not vehicle:
+            return jsonify({"message": "Vehicle not found."}), 404
+
+        # Get the last location
+        location = vehicle.locations.order_by(Location.timestamp.desc()).first()
+
+        if not location:
+            return jsonify({"message": "No location found for this vehicle."}), 404
+
+        location_data = {
+            "latitude": location.latitude,
+            "longitude": location.longitude,
+            "timestamp": location.timestamp.isoformat(),  # Format timestamp as ISO string
+        }
+        return jsonify(location_data), 200
+    except SQLAlchemyError as e:
+        # Log the error for debugging purposes
+        print(f"Database error occurred: {e}")
+        return (
+            jsonify({"message": "An error occurred while accessing the database."}),
+            500,
+        )
+
+
+@vehicle_bp.route(
+    "/set_arriving_station/<int:vehicle_id>/<int:station_id>", methods=["POST"]
+)
+def set_arriving_station(vehicle_id, station_id):
+    try:
+        vehicle = Vehicle.query.get(vehicle_id)
+        station = Station.query.get(station_id)
+        if not vehicle or not station:
+            return jsonify({"message": "Vehicle or Station not found."}), 404
+
+        vehicle.arriving_station = station
+        db.session.commit()
+        return jsonify({"message": "Arriving station set successfully."}), 200
+    except SQLAlchemyError as e:
+        # Log the error for debugging purposes
+        print(f"Database error occurred: {e}")
+        return (
+            jsonify({"message": "An error occurred while accessing the database."}),
+            500,
+        )

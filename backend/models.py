@@ -8,11 +8,24 @@ import secrets
 class Vehicle(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     vehicle_name = db.Column(db.String(50), nullable=True)
-    latitude = db.Column(db.Float)
-    longitude = db.Column(db.Float)
+    locations = db.relationship("Location", backref="vehicle", lazy="dynamic")
     last_update = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
     vehicle_type = db.Column(db.String(50), nullable=True)
+    arriving_station_id = db.Column(
+        db.Integer, db.ForeignKey("station.id"), nullable=True
+    )
+    arriving_station = db.relationship(
+        "Station", backref="arriving_vehicles", lazy=True
+    )
+
+
+class Location(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    vehicle_id = db.Column(db.Integer, db.ForeignKey("vehicle.id"), nullable=False)
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class User(db.Model, UserMixin):
