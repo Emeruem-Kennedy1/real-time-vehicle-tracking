@@ -13,7 +13,7 @@ def login():
     password = data.get("password")
 
     user = User.query.filter_by(email=email).first()
-    if user and check_password_hash(user.password_hash, password):
+    if user and check_password_hash(user.password, password):
         login_user(user)
         return jsonify({"message": "Login successful", "user_id": user.id}), 200
 
@@ -29,15 +29,17 @@ def logout():
 
 @auth_bp.route("/register", methods=["POST"])
 def register():
+
     data = request.get_json()
     username = data.get("username")
     email = data.get("email")
     password = data.get("password")
 
     if User.query.filter_by(email=email).first():
-        return jsonify({"message": "Username already exists"}), 400
+        return jsonify({"message": "Email already exists"}), 400
 
-    new_user = User(username=username)
+    new_user = User(username=username, email=email)
+    print(new_user)
     new_user.set_password(password)
     db.session.add(new_user)
     db.session.commit()

@@ -44,13 +44,13 @@ def update_location():
 @require_api_key
 def register_vehicle():
     data = request.get_json()
-    vehiclename = data.get("vehiclename")
-    email = data.get("email")  # Assuming email is optional
+    vehicle_name = data.get("vehicle_name")
+    vehicle_type = data.get("vehicle_type")
 
-    if Vehicle.query.filter_by(vehiclename=vehiclename).first():
-        return jsonify({"message": "vehiclename already taken."}), 400
+    if Vehicle.query.filter_by(vehicle_name=vehicle_name).first():
+        return jsonify({"message": "This vehicle already exists"}), 400
 
-    new_vehicle = Vehicle(vehiclename=vehiclename, email=email)
+    new_vehicle = Vehicle(vehicle_name=vehicle_name, vehicle_type=vehicle_type)
     db.session.add(new_vehicle)
     db.session.commit()
 
@@ -60,7 +60,7 @@ def register_vehicle():
     )
 
 
-@vehicle_bp.route("/vehicle/<int:vehicle_id>", methods=["GET"])
+@vehicle_bp.route("/<int:vehicle_id>", methods=["GET"])
 @require_api_key
 def get_vehicle(vehicle_id):
     vehicle = Vehicle.query.get(vehicle_id)
