@@ -179,3 +179,37 @@ def set_arriving_station(vehicle_id, station_id):
             jsonify({"message": "An error occurred while accessing the database."}),
             500,
         )
+
+
+@vehicle_bp.route("/get_arrival_station/<int:vehicle_id>", methods=["GET"])
+def get_arrival_station(vehicle_id):
+    try:
+        vehicle = Vehicle.query.get(vehicle_id)
+        if not vehicle:
+            return jsonify({"message": "Vehicle not found."}), 404
+
+        if not vehicle.arriving_station:
+            return (
+                jsonify({"message": "No arriving station set for this vehicle."}),
+                404,
+            )
+
+        station_data = {
+            "id": vehicle.arriving_station.id,
+            "name": vehicle.arriving_station.name,
+            "latitude": vehicle.arriving_station.latitude,
+            "longitude": vehicle.arriving_station.longitude,
+            "capacity": vehicle.arriving_station.capacity,
+            "status": vehicle.arriving_station.status,
+            "contact_number": vehicle.arriving_station.contact_number,
+            "email": vehicle.arriving_station.email,
+            "arrival_time": vehicle.estimate_arrival_time()
+        }
+        return jsonify(station_data), 200
+    except SQLAlchemyError as e:
+        # Log the error for debugging purposes
+        print(f"Database error occurred: {e}")
+        return (
+            jsonify({"message": "An error occurred while accessing the database."}),
+            500,
+        )

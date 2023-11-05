@@ -28,6 +28,7 @@ def create_station():
         )
         db.session.add(new_station)
         db.session.commit()
+        return jsonify({"message": "Station created successfully."}), 200
     except Exception as e:
         db.session.rollback()
         print(e)

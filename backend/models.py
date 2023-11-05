@@ -3,6 +3,9 @@ from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
+from haversine import haversine, Unit
+from datetime import timedelta
+from sqlalchemy import desc
 
 
 class Vehicle(db.Model):
@@ -18,6 +21,59 @@ class Vehicle(db.Model):
     arriving_station = db.relationship(
         "Station", backref="arriving_vehicles", lazy=True
     )
+    average_speed = db.Column(db.Float, default=50)
+
+    def estimate_arrival_time(self):
+        if not self.arriving_station or self.locations.count() == 0:
+            return None  # Cannot estimate without a destination or location history
+
+        # Get the latest location
+        latest_location = self.locations.order_by(Location.timestamp.desc()).first()
+        current_location = (latest_location.latitude, latest_location.longitude)
+        arriving_station_location = (
+            self.arriving_station.latitude,
+            self.arriving_station.longitude,
+        )
+
+        self.average_speed = self.calculate_average_speed()
+
+        # Calculate the distance using the haversine package
+        distance_km = haversine(
+            current_location, arriving_station_location, unit=Unit.KILOMETERS
+        )
+
+        # Assuming distance is in kilometers and average_speed_kmh is in km/h
+        travel_time_hours = distance_km / self.average_speed
+
+        # Get the current time
+        current_time = datetime.utcnow()
+
+        # Calculate the estimated arrival time
+        estimated_arrival_time = current_time + timedelta(hours=travel_time_hours)
+        return estimated_arrival_time
+
+    def calculate_average_speed(self, num_locations=5):
+        locations = self.locations.order_by(desc(Location.timestamp)).limit(num_locations + 1).all()
+
+        if len(locations) < 2:
+            return None  # Not enough location data to calculate speed
+
+        total_distance = 0
+        total_time = 0
+        for i in range(len(locations) - 1):
+            loc1 = locations[i]
+            loc2 = locations[i + 1]
+            distance = haversine((loc1.latitude, loc1.longitude), (loc2.latitude, loc2.longitude), unit=Unit.KILOMETERS)
+            total_distance += distance
+
+            time_diff = (loc1.timestamp - loc2.timestamp).total_seconds() / 3600  # in hours
+            total_time += time_diff
+
+        if total_time == 0:
+            return 0  # Prevent division by zero
+
+        average_speed = total_distance / total_time  # Speed = Distance / Time
+        return average_speed
 
 
 class Location(db.Model):
