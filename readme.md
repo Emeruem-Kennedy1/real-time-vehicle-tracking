@@ -76,41 +76,25 @@ List any prerequisites, libraries, OS version, etc., needed before installing th
 
 ## Folder Structure
 ```
-Heirarchical-Todo-List-App
+real-time-vehicle-tracking
 │
-├── Backend/                  # Backend API developed with Flask
-│   ├── __init__.py           # Initialization of the Flask app
-│   ├── auth.py               # Authentication related operations
-│   ├── list.py               # Handling todo list operations
-│   ├── models.py             # Database models
-│   ├── readme.md             # Backend specific documentation
-│   ├── requirements.txt      # Dependencies for the backend
-│   └── task.py               # Task management operations
+├── backend/                      # Backend API
+│   ├── __init__.py               # Initialization of backend package
+│   ├── auth/
+│   │   └── routes.py             # Authentication routes
+│   ├── config.py                 # Configuration settings
+│   ├── models.py                 # Database models
+│   ├── station/
+│   │   ├── __init__.py           # Initialization of station package
+│   │   └── routes.py             # Station-related routes
+│   ├── user/
+│   │   ├── __init__.py           # Initialization of user package
+│   │   └── routes.py             # User-related routes
+│   └── vehicle/
+│       ├── __init__.py           # Initialization of vehicle package
+│       └── routes.py             # Vehicle-related routes
 │
-├── frontend/                 # Frontend developed using React
-│   ├── package-lock.json     # Locked versions of npm dependencies
-│   ├── package.json          # NPM package configuration
-│   ├── public/               # Public assets like HTML, logo, etc.
-│   │   ├── index.html        # Entry HTML file
-│   │   ├── logo.png          # App logo
-│   │   └── manifest.json     # Web app manifest file
-│   ├── src/                  # Source files for React components
-│   │   ├── App.js            # Main React application component
-│   │   ├── ListAppApiclient.js # API client for backend communication
-│   │   ├── components/       # Reusable React components
-│   │   ├── contexts/         # React contexts for state management
-│   │   ├── hooks/            # Custom React hooks
-│   │   ├── index.js          # Entry point for React app
-│   │   ├── theme.js          # Theme configuration for the app
-│   │   └── views/            # React components for different views/pages
-│   └── ...
-│
-├── tests/                    # Tests for the application
-│   ├── __init__.py           # Initialization for tests
-│   ├── test_list.py          # Tests for list operations
-│   └── test_task.py          # Tests for task operations
-│
-├── .env                      # Environment variables
-├── main.py                   # Main entry point for the Flask application
-└── README.md                 # General documentation for the entire project
+├── backend_api_usage_tutorial.ipynb  # Jupyter notebook for backend API usage tutorial
+├── readme.md                         # README for the repository
+└── requirements.txt                  # Required packages
 ```
